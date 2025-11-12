@@ -17,6 +17,10 @@ class _DespesaScreenState extends State<DespesaScreen> {
     final despesas = _data.getDespesas();
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cadastro de Despesas'),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
