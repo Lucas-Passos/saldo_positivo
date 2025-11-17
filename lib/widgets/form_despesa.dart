@@ -29,10 +29,13 @@ class _FormDespesaState extends State<FormDespesa> {
 
   /// Função de salvamento com validação
   void _salvar() {
-    if (!_formKey.currentState!.validate()) return;
-
     final descricao = _descricaoController.text;
-    final valor = double.tryParse(_valorController.text)!;
+
+    // ✔ aceita tanto 120,50 quanto 120.50
+    final valorTexto = _valorController.text.replaceAll(',', '.');
+    final valor = double.tryParse(valorTexto) ?? 0;
+
+    if (descricao.isEmpty || valor <= 0) return;
 
     final despesa = Despesa(
       descricao: descricao,
@@ -75,7 +78,7 @@ class _FormDespesaState extends State<FormDespesa> {
             controller: _descricaoController,
             decoration: const InputDecoration(labelText: 'Descrição'),
             validator: (value) =>
-                value == null || value.isEmpty ? 'Informe uma descrição' : null,
+            value == null || value.isEmpty ? 'Informe uma descrição' : null,
           ),
 
           // Campo de valor
