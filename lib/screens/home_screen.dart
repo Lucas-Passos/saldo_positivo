@@ -13,65 +13,73 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // Mantemos as instâncias das telas para preservar estado
   final List<Widget> _telas = const [
     ReceitaScreen(),
     DespesaScreen(),
     ResultadoScreen(),
   ];
 
-  // Função utilitária para trocar a página e fechar o drawer corretamente
-  void _onSelect(int index) {
-    // 1) Fecha o drawer (pop da rota atual do drawer)
-    Navigator.of(context).pop();
+  // 🔹 Títulos dinâmicos
+  final List<String> _titulos = const [
+    'Receitas',
+    'Despesas',
+    'Resumo Financeiro',
+  ];
 
-    // 2) Atualiza o índice (após o pop, o setState vai trocar o body)
-    //    Não precisa de await; o pop fecha a drawer imediatamente.
-    setState(() => _selectedIndex = index);
+  // 🔹 Cores dinâmicas do AppBar
+  final List<Color> _coresAppBar = const [
+    Colors.green,
+    Colors.red,
+    Colors.blue,
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    Navigator.of(context).pop(); // Fecha o drawer
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Saldo Positivo')),
+      appBar: AppBar(
+        backgroundColor: _coresAppBar[_selectedIndex], // COR MUDA AQUI
+        title: Text(
+          _titulos[_selectedIndex], // TÍTULO MUDA AQUI
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.green),
-              child: Text(
+            DrawerHeader(
+              decoration: BoxDecoration(color: _coresAppBar[_selectedIndex]),
+              child: const Text(
                 'Menu',
                 style: TextStyle(color: Colors.white, fontSize: 22),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.attach_money),
               title: const Text('Receitas'),
-              selected: _selectedIndex == 0, // destaca o item ativo
-              onTap: () => _onSelect(0), // fecha e seleciona
+              onTap: () => _onItemTapped(0),
             ),
             ListTile(
-              leading: const Icon(Icons.money_off),
               title: const Text('Despesas'),
-              selected: _selectedIndex == 1,
-              onTap: () => _onSelect(1),
+              onTap: () => _onItemTapped(1),
             ),
             ListTile(
-              leading: const Icon(Icons.assessment),
               title: const Text('Resultado'),
-              selected: _selectedIndex == 2,
-              onTap: () => _onSelect(2),
+              onTap: () => _onItemTapped(2),
             ),
           ],
         ),
       ),
-
-      // IndexedStack mantém o estado interno de cada tela
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _telas,
-      ),
+      body: _telas[_selectedIndex],
     );
   }
 }
