@@ -19,32 +19,62 @@ class _HomeScreenState extends State<HomeScreen> {
     ResultadoScreen(),
   ];
 
+  // 🔹 Títulos dinâmicos
+  final List<String> _titulos = const [
+    'Receitas',
+    'Despesas',
+    'Resumo Financeiro',
+  ];
+
+  // 🔹 Cores dinâmicas do AppBar
+  final List<Color> _coresAppBar = const [
+    Colors.green,
+    Colors.red,
+    Colors.blue,
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    Navigator.of(context).pop(); // Fecha o drawer
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Saldo Positivo')),
+      appBar: AppBar(
+        backgroundColor: _coresAppBar[_selectedIndex], // COR MUDA AQUI
+        title: Text(
+          _titulos[_selectedIndex], // TÍTULO MUDA AQUI
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.green),
-              child: Text(
+            DrawerHeader(
+              decoration: BoxDecoration(color: _coresAppBar[_selectedIndex]),
+              child: const Text(
                 'Menu',
                 style: TextStyle(color: Colors.white, fontSize: 22),
               ),
             ),
             ListTile(
               title: const Text('Receitas'),
-              onTap: () => setState(() => _selectedIndex = 0),
+              onTap: () => _onItemTapped(0),
             ),
             ListTile(
               title: const Text('Despesas'),
-              onTap: () => setState(() => _selectedIndex = 1),
+              onTap: () => _onItemTapped(1),
             ),
             ListTile(
               title: const Text('Resultado'),
-              onTap: () => setState(() => _selectedIndex = 2),
+              onTap: () => _onItemTapped(2),
             ),
           ],
         ),
