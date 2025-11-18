@@ -21,7 +21,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
   DateTime? dataInicial;
   DateTime? dataFinal;
 
-  // 1. LÓGICA DE AGRUPAMENTO (Mantida)
+  // 1. LÓGICA DE AGRUPAMENTO
   Map<String, double> agruparPorCategoria(List<dynamic> itens) {
     final Map<String, double> mapa = {};
 
@@ -35,71 +35,21 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
     return mapa;
   }
 
-  // 2. LÓGICA DE EXIBIÇÃO DE MODAL (Mantida)
-  void mostrarCategorias(String titulo, Map<String, double> categorias) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              // Usando um ListView.builder para melhor eficiência e scannability
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: categorias.length,
-                  itemBuilder: (context, index) {
-                    final entry = categorias.entries.elementAt(index);
-                    return ListTile(
-                      title: Text(entry.key),
-                      trailing: Text(
-                        "R\$ ${entry.value.toStringAsFixed(2)}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 3. NOVO: Lógica de filtragem de item por período (Reutilização de código)
   bool _filtrarPorPeriodo(dynamic item) {
     if (dataInicial != null && item.data.isBefore(dataInicial!)) {
       return false;
     }
-    // Note: Usamos `isAfter` do dataFinal para incluir o dia final.
-    // Se o DateTime do item tiver hora, pode ser que o último dia seja excluído.
-    // Para precisão total, precisaríamos zerar a hora. Por simplicidade, mantivemos a lógica original.
+
     if (dataFinal != null && item.data.isAfter(dataFinal!)) {
       return false;
     }
     return true;
   }
 
-  // 4. NOVO: Cálculo dos resultados filtrados (Separação de lógica)
   ResultadosFinanceiros _calcularResultadosFiltrados(
     List<Receita> receitas,
     List<Despesa> despesas,
   ) {
-    // 🔹 FILTRANDO PELO PERÍODO (Reutilizando _filtrarPorPeriodo)
     final receitasFiltradas = receitas.where(_filtrarPorPeriodo).toList();
     final despesasFiltradas = despesas.where(_filtrarPorPeriodo).toList();
 
@@ -125,36 +75,50 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
     );
   }
 
-  // 5. NOVO: Construtor de Card reutilizável (Limpeza da UI)
-  Widget _buildResultadoCard({
+  Widget _buildExpansionCard({
     required Color color,
     required IconData icon,
     required String title,
     required double total,
     required List<dynamic> itens,
-    required String modalTitle,
+    required String subtitleText,
   }) {
-    return GestureDetector(
-      onTap: () {
-        final mapa = agruparPorCategoria(itens);
-        mostrarCategorias(modalTitle, mapa);
-      },
-      child: Card(
-        color: color,
-        child: ListTile(
-          leading: Icon(
-            icon,
-            color: color == Colors.green.shade50 ? Colors.green : Colors.red,
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          trailing: Text(
-            "R\$ ${total.toStringAsFixed(2)}",
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+    // 1. Agrupar as categorias
+    final categoriasAgrupadas = agruparPorCategoria(itens);
+
+    // 2. Mapear as categorias para ListTiles
+    final listaDeCategorias = categoriasAgrupadas.entries.map((e) {
+      return ListTile(
+        contentPadding: const EdgeInsets.only(left: 35, right: 20), // Recuo
+        title: Text(e.key),
+        trailing: Text(
+          "R\$ ${e.value.toStringAsFixed(2)}",
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
+      );
+    }).toList();
+
+    return Card(
+      color: color,
+      child: ExpansionTile(
+        leading: Icon(
+          icon,
+          color: color == Colors.green.shade50 ? Colors.green : Colors.red,
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitleText), // Exibe o total como subtítulo
+        trailing: Text(
+          "R\$ ${total.toStringAsFixed(2)}",
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        children: listaDeCategorias.isEmpty
+            ? [
+                const Padding(
+                  padding: EdgeInsets.all(15),
+                  child: Text("Nenhuma transação encontrada no período."),
+                ),
+              ]
+            : listaDeCategorias,
       ),
     );
   }
@@ -212,26 +176,25 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
 
                     const SizedBox(height: 10),
 
-                    // 🟩 CARD TOTAL RECEITAS FILTRADAS (UI Limpa)
-                    _buildResultadoCard(
+                    // 🟩 CARD TOTAL RECEITAS FILTRADAS
+                    _buildExpansionCard(
                       color: Colors.green.shade50,
                       icon: Icons.arrow_upward,
-                      title: "Receitas no período",
+                      title: "Resumo de Receitas ",
+                      subtitleText: "Toque para ver detalhes",
                       total: resultados.totalReceitas,
                       itens: resultados.receitasFiltradas,
-                      modalTitle: "Receitas por categoria",
                     ),
 
-                    // 🟥 CARD TOTAL DESPESAS FILTRADAS (UI Limpa)
-                    _buildResultadoCard(
+                    // 🟥 CARD TOTAL DESPESAS FILTRADAS
+                    _buildExpansionCard(
                       color: Colors.red.shade50,
                       icon: Icons.arrow_downward,
-                      title: "Despesas no período",
+                      title: "Resumo de Despesas ",
+                      subtitleText: "Toque para ver detalhes",
                       total: resultados.totalDespesas,
                       itens: resultados.despesasFiltradas,
-                      modalTitle: "Despesas por categoria",
                     ),
-
                     // 🟦 SALDO NO PERÍODO
                     SaldoCard(saldo: resultados.saldo),
                   ],
