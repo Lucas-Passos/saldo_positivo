@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:saldo_positivo/widgets/form_despesa.dart';
 import '../models/despesa.dart';
-// Acessando Hive Box diretamente, HiveDataSource não é necessário aqui.
 
 class DespesaScreen extends StatefulWidget {
   const DespesaScreen({super.key});
@@ -33,7 +32,6 @@ class _DespesaScreenState extends State<DespesaScreen> {
             const FormDespesa(),
             const SizedBox(height: 20),
 
-            // 🌟 CORREÇÃO DO ERRO: ValueListenableBuilder ENVOLVIDO POR Expanded
             Expanded(
               child: ValueListenableBuilder(
                 valueListenable: despesasBox.listenable(),

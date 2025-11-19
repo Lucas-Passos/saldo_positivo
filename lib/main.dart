@@ -5,6 +5,9 @@ import 'models/despesa.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
+const boxReceitas = 'receitas';
+const boxDespesas = 'despesas';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
@@ -12,14 +15,18 @@ void main() async {
   Hive.registerAdapter(ReceitaAdapter());
   Hive.registerAdapter(DespesaAdapter());
 
-  await Hive.openBox<Receita>('receitas');
-  await Hive.openBox<Despesa>('despesas');
+  try {
+    await Hive.openBox<Receita>(boxReceitas);
+    await Hive.openBox<Despesa>(boxDespesas);
+  } catch (e) {
+    debugPrint('Erro ao abrir boxes do Hive: $e');
+  }
 
-  runApp(const SaldoPositivoApp());
+  runApp(const MyApp());
 }
 
-class SaldoPositivoApp extends StatelessWidget {
-  const SaldoPositivoApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +37,11 @@ class SaldoPositivoApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home: const LoginScreen(),
-      routes: {'/home': (_) => const HomeScreen()},
+      initialRoute: '/login',
+      routes: {
+        '/login': (_) => const LoginScreen(),
+        '/home': (_) => const HomeScreen(),
+      },
     );
   }
 }

@@ -7,10 +7,12 @@ class ClearFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
+    return ActionChip(
+      avatar: const Icon(Icons.filter_alt_off_rounded, size: 20),
+      label: const Text("Limpar filtros", style: TextStyle(fontSize: 15)),
       onPressed: onClear,
-      icon: const Icon(Icons.clear, color: Colors.red),
-      label: const Text("Limpar filtros", style: TextStyle(color: Colors.red)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 }
