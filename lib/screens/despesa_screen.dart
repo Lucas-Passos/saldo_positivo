@@ -14,19 +14,22 @@ class _DespesaScreenState extends State<DespesaScreen> {
   @override
   Widget build(BuildContext context) {
     final despesasBox = Hive.box<Despesa>('despesas');
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          // ⬅️ COLUMN PRINCIPAL
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Conteúdo de altura fixa (Topo da Tela)
-            const Text(
+            Text(
               "Cadastro de Despesas",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
+
             const SizedBox(height: 20),
 
             const FormDespesa(),
@@ -43,50 +46,92 @@ class _DespesaScreenState extends State<DespesaScreen> {
                       : null;
 
                   return Column(
-                    // ⬅️ COLUMN INTERNA (Limitada pelo Expanded acima)
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Conteúdo de altura fixa (Card Última Despesa)
                       if (ultima != null)
                         Card(
-                          color: Colors.red.shade50,
+                          elevation: 0,
+                          color: colors.surfaceContainerHigh,
                           child: ListTile(
-                            title: Text("Última despesa: ${ultima.descricao}"),
+                            title: Text(
+                              "Última despesa: ${ultima.descricao}",
+                              style: theme.textTheme.bodyLarge,
+                            ),
                             subtitle: Text(
-                              "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}",
+                              "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}\n"
+                              "📅 ${ultima.data.day}/${ultima.data.month}/${ultima.data.year}",
+                              style: theme.textTheme.bodyMedium,
                             ),
                           ),
                         ),
 
                       const SizedBox(height: 20),
 
-                      const Text(
+                      Text(
                         "Lista de Despesas",
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 10),
 
-                      // 4. Lista de Despesas: precisa de Expanded aqui para pegar o restante do espaço da COLUMN INTERNA
                       Expanded(
                         child: ListView.builder(
                           itemCount: despesasOrdenadas.length,
                           itemBuilder: (context, i) {
                             final d = despesasOrdenadas[i];
+
                             return Card(
+                              elevation: 0,
+                              color: colors.surfaceContainerHigh,
                               child: ListTile(
-                                title: Text(d.descricao),
-                                subtitle: Text(
-                                  '${d.categoria} - R\$ ${d.valor.toStringAsFixed(2)}',
+                                title: Text(
+                                  d.descricao,
+                                  style: theme.textTheme.bodyLarge,
                                 ),
+                                subtitle: Text(
+                                  '${d.categoria} — R\$ ${d.valor.toStringAsFixed(2)}\n'
+                                  '📅 ${d.data.day}/${d.data.month}/${d.data.year}',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+
                                 trailing: IconButton(
                                   icon: const Icon(
                                     Icons.delete,
                                     color: Colors.red,
                                   ),
-                                  onPressed: () => box.delete(d.key),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        backgroundColor:
+                                            colors.surfaceContainerLow,
+                                        title: const Text("Excluir Despesa"),
+                                        content: const Text(
+                                          "Tem certeza que deseja remover este item permanentemente?",
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(ctx).pop(),
+                                            child: const Text("Cancelar"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              box.delete(d.key);
+                                              Navigator.of(ctx).pop();
+                                            },
+                                            child: const Text(
+                                              "Excluir",
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             );

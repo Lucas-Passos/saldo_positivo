@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Adicionado
-import '../models/receita.dart'; // Adicionado (Assumindo caminho)
-import '../models/despesa.dart'; // Adicionado (Assumindo caminho)
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/receita.dart';
+import '../models/despesa.dart';
 import 'receita_screen.dart';
 import 'despesa_screen.dart';
 import 'resultado_screen.dart';
@@ -22,14 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ResultadoScreen(),
   ];
 
-  // 🔹 Títulos dinâmicos
   final List<String> _titulos = const [
     'Receitas',
     'Despesas',
     'Resumo Financeiro',
   ];
 
-  // 🔹 Cores dinâmicas do AppBar
   final List<Color> _coresAppBar = const [
     Colors.green,
     Colors.red,
@@ -40,15 +38,19 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    // Fecha o drawer após a navegação
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color drawerHeaderColor = Theme.of(
-      context,
-    ).colorScheme.primary; // Cor fixa para o Header
+    // Box que armazena a preferência do tema
+    final settingsBox = Hive.box('settings');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Header do Drawer adaptado ao tema
+    final drawerHeaderColor = isDark
+        ? const Color.fromARGB(255, 7, 92, 12)
+        : const Color.fromARGB(255, 39, 179, 44);
 
     return Scaffold(
       appBar: AppBar(
@@ -60,12 +62,29 @@ class _HomeScreenState extends State<HomeScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          ValueListenableBuilder(
+            valueListenable: settingsBox.listenable(),
+            builder: (context, box, _) {
+              final isDarkMode = box.get('isDark', defaultValue: false);
+              return IconButton(
+                icon: Icon(
+                  isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  box.put('isDark', !isDarkMode);
+                },
+              );
+            },
+          ),
+        ],
       ),
+
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // 💡 DrawerHeader com cor fixa para melhor consistência
             DrawerHeader(
               decoration: BoxDecoration(color: drawerHeaderColor),
               child: const Text(
@@ -74,21 +93,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.attach_money),
               title: const Text('Receitas'),
-              selected: _selectedIndex == 0, // Destaque para o item selecionado
+              selected: _selectedIndex == 0,
               onTap: () => _onItemTapped(0),
             ),
             ListTile(
+              leading: const Icon(Icons.money_off),
               title: const Text('Despesas'),
-              selected: _selectedIndex == 1, // Destaque para o item selecionado
+              selected: _selectedIndex == 1,
               onTap: () => _onItemTapped(1),
             ),
             ListTile(
+              leading: const Icon(Icons.pie_chart),
               title: const Text('Resultado'),
-              selected: _selectedIndex == 2, // Destaque para o item selecionado
+              selected: _selectedIndex == 2,
               onTap: () => _onItemTapped(2),
             ),
-
             const Divider(),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -101,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
       body: _telas[_selectedIndex],
     );
   }
@@ -110,10 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            "Apagar todos os registros?",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          title: const Text("Apagar todos os registros?"),
           content: const Text(
             "Esta ação é permanente e não pode ser desfeita.",
           ),
@@ -124,15 +143,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () async {
-                // Certifique-se de que os modelos Receita e Despesa estão importados
                 final receitasBox = Hive.box<Receita>('receitas');
                 final despesasBox = Hive.box<Despesa>('despesas');
 
                 await receitasBox.clear();
                 await despesasBox.clear();
 
-                Navigator.pop(context); // 1. Fecha o diálogo
-                Navigator.pop(context); // 2. Fecha o drawer
+                Navigator.pop(context);
+                Navigator.pop(context);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -141,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
 
-                // Força a reconstrução para refletir os dados apagados (se necessário)
                 setState(() {});
               },
               child: const Text(

@@ -27,6 +27,25 @@ class _FormReceitaState extends State<FormReceita> {
 
   String _categoriaSelecionada = 'Salário';
 
+  /// NOVO: Data selecionada
+  DateTime _dataSelecionada = DateTime.now();
+
+  // Abre o seletor de data
+  Future<void> _selecionarData() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dataSelecionada,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dataSelecionada = picked;
+      });
+    }
+  }
+
   /// Função de salvamento com validação
   void _salvar() {
     // 1. Validação do formulário
@@ -36,17 +55,16 @@ class _FormReceitaState extends State<FormReceita> {
 
     final descricao = _descricaoController.text;
 
-    // ✔ Aceita tanto 120,50 quanto 120.50 (igual ao form_despesa)
+    // ✔ Aceita tanto 120,50 quanto 120.50
     final valorTexto = _valorController.text.replaceAll(',', '.');
     final valor = double.tryParse(valorTexto) ?? 0;
 
-    // A validação do Formulário já cobre a maioria dos erros, mas verificamos o valor por segurança
     if (valor <= 0) return;
 
     final receita = Receita(
       descricao: descricao,
       valor: valor,
-      data: DateTime.now(),
+      data: _dataSelecionada, // ← Agora usa a data escolhida
       categoria: _categoriaSelecionada,
     );
 
@@ -60,15 +78,17 @@ class _FormReceitaState extends State<FormReceita> {
         backgroundColor: Colors.green,
       ),
     );
+
     _descricaoController.clear();
     _valorController.clear();
 
-    // Notifica a tela pai para reconstruir e mostrar a nova receita,
-    // embora o ValueListenableBuilder faça isso de forma reativa.
-    setState(() {});
+    setState(() {
+      _categoriaSelecionada = _categorias.first;
+      _dataSelecionada = DateTime.now(); // reseta após salvar
+    });
   }
 
-  // Define ícones para cada categoria (para um melhor UX visual, espelhando form_despesa)
+  // Define ícones para cada categoria
   IconData _iconeCategoria(String categoria) {
     switch (categoria) {
       case 'Salário':
@@ -108,13 +128,32 @@ class _FormReceitaState extends State<FormReceita> {
             decoration: const InputDecoration(labelText: 'Valor (R\$)'),
             keyboardType: TextInputType.number,
             validator: (value) {
-              final valorTexto = value!.replaceAll(',', '.');
-              if (double.tryParse(valorTexto) == null ||
-                  double.tryParse(valorTexto)! <= 0) {
+              final texto = value!.replaceAll(',', '.');
+              if (double.tryParse(texto) == null ||
+                  double.tryParse(texto)! <= 0) {
                 return 'Insira um valor válido e positivo';
               }
               return null;
             },
+          ),
+
+          const SizedBox(height: 16),
+
+          // 📅 NOVO CAMPO — Seleção de Data
+          GestureDetector(
+            onTap: _selecionarData,
+            child: AbsorbPointer(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Data da receita',
+                  prefixIcon: Icon(Icons.calendar_month),
+                ),
+                controller: TextEditingController(
+                  text:
+                      "${_dataSelecionada.day}/${_dataSelecionada.month}/${_dataSelecionada.year}",
+                ),
+              ),
+            ),
           ),
 
           const SizedBox(height: 16),

@@ -18,6 +18,9 @@ void main() async {
   try {
     await Hive.openBox<Receita>(boxReceitas);
     await Hive.openBox<Despesa>(boxDespesas);
+
+    // 👉 Necessário para armazenar e manter o tema do app
+    await Hive.openBox('settings');
   } catch (e) {
     debugPrint('Erro ao abrir boxes do Hive: $e');
   }
@@ -30,17 +33,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Saldo Positivo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
-      routes: {
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const HomeScreen(),
+    final settingsBox = Hive.box('settings');
+
+    return ValueListenableBuilder(
+      valueListenable: settingsBox.listenable(),
+      builder: (context, box, _) {
+        final isDark = box.get('isDark', defaultValue: false);
+
+        return MaterialApp(
+          title: 'Saldo Positivo',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData.dark(useMaterial3: true),
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+          debugShowCheckedModeBanner: false,
+          initialRoute: '/login',
+          routes: {
+            '/login': (_) => const LoginScreen(),
+            '/home': (_) => const HomeScreen(),
+          },
+        );
       },
     );
   }
