@@ -211,7 +211,7 @@ class _ResultadoScreenState extends State<ResultadoScreen> {
 
                     const SizedBox(height: 20),
 
-                    // GRÁFICOS — sem alteração
+                    // GRÁFICOS
                     SizedBox(
                       height: 300,
                       child: PageView(

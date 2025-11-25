@@ -5,6 +5,8 @@ import '../models/despesa.dart';
 import 'receita_screen.dart';
 import 'despesa_screen.dart';
 import 'resultado_screen.dart';
+import '../hive/hive_config.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,11 +43,23 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pop();
   }
 
+  void _logout() async {
+    final sessionBox = HiveConfig.getSessionBox();
+    await sessionBox.delete('loggedEmail');
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (Route<dynamic> route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Box que armazena a preferência do tema
     final settingsBox = Hive.box('settings');
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final logoutColor = isDark ? Colors.white70 : Colors.black54;
 
     // Header do Drawer adaptado ao tema
     final drawerHeaderColor = isDark
@@ -92,18 +106,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 22),
               ),
             ),
+
             ListTile(
               leading: const Icon(Icons.attach_money),
               title: const Text('Receitas'),
               selected: _selectedIndex == 0,
               onTap: () => _onItemTapped(0),
             ),
+
             ListTile(
               leading: const Icon(Icons.money_off),
               title: const Text('Despesas'),
               selected: _selectedIndex == 1,
               onTap: () => _onItemTapped(1),
             ),
+
             ListTile(
               leading: const Icon(Icons.pie_chart),
               title: const Text('Resultado'),
@@ -111,6 +128,17 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onItemTapped(2),
             ),
             const Divider(),
+
+            ListTile(
+              leading: Icon(Icons.logout, color: logoutColor),
+              title: Text(
+                'Sair (Logout)',
+                style: TextStyle(color: logoutColor),
+              ),
+              onTap: _logout,
+            ),
+            const Divider(),
+
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text(

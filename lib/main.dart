@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:saldo_positivo/hive/hive_config.dart';
+import 'package:saldo_positivo/models/user_model.dart';
 import 'models/receita.dart';
 import 'models/despesa.dart';
 import 'screens/login_screen.dart';
@@ -14,12 +16,11 @@ void main() async {
 
   Hive.registerAdapter(ReceitaAdapter());
   Hive.registerAdapter(DespesaAdapter());
-
+  Hive.registerAdapter(UserAdapter());
   try {
     await Hive.openBox<Receita>(boxReceitas);
     await Hive.openBox<Despesa>(boxDespesas);
-
-    // 👉 Necessário para armazenar e manter o tema do app
+    await HiveConfig.openBoxes();
     await Hive.openBox('settings');
   } catch (e) {
     debugPrint('Erro ao abrir boxes do Hive: $e');

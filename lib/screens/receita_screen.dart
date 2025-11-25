@@ -88,7 +88,6 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Lista interna não-rolável (o SingleChildScrollView faz a rolagem)
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
