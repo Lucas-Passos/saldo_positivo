@@ -4,6 +4,7 @@ import 'package:saldo_positivo/hive/hive_config.dart';
 import 'package:saldo_positivo/models/user_model.dart';
 import 'models/receita.dart';
 import 'models/despesa.dart';
+import 'models/user.dart'; // <--- 1. Importar o modelo de usuário
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
