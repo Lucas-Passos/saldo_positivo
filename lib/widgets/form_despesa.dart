@@ -15,7 +15,7 @@ class _FormDespesaState extends State<FormDespesa> {
   final _valorController = TextEditingController();
   final HiveDataSource _data = HiveDataSource();
 
-  // Lista fixa de categorias — poderia vir do banco no futuro
+  // Lista fixa de categorias
   final List<String> _categorias = [
     'Alimentação',
     'Transporte',
@@ -27,20 +27,41 @@ class _FormDespesaState extends State<FormDespesa> {
 
   String _categoriaSelecionada = 'Alimentação';
 
+  /// NOVO: Data selecionada
+  DateTime _dataSelecionada = DateTime.now();
+
+  // Abre o seletor de data
+  Future<void> _selecionarData() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dataSelecionada,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dataSelecionada = picked;
+      });
+    }
+  }
+
   /// Função de salvamento com validação
   void _salvar() {
+    if (!_formKey.currentState!.validate()) return;
+
     final descricao = _descricaoController.text;
 
     // ✔ aceita tanto 120,50 quanto 120.50
     final valorTexto = _valorController.text.replaceAll(',', '.');
     final valor = double.tryParse(valorTexto) ?? 0;
 
-    if (descricao.isEmpty || valor <= 0) return;
+    if (valor <= 0) return;
 
     final despesa = Despesa(
       descricao: descricao,
       valor: valor,
-      data: DateTime.now(),
+      data: _dataSelecionada, // ← AGORA SALVA A DATA ESCOLHIDA
       categoria: _categoriaSelecionada,
     );
 
@@ -49,10 +70,10 @@ class _FormDespesaState extends State<FormDespesa> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Text('Despesa adicionada: $descricao'),
+          children: const [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Despesa adicionada!'),
           ],
         ),
         backgroundColor: Colors.green,
@@ -63,6 +84,7 @@ class _FormDespesaState extends State<FormDespesa> {
     _valorController.clear();
     setState(() {
       _categoriaSelecionada = _categorias.first;
+      _dataSelecionada = DateTime.now();
     });
   }
 
@@ -78,7 +100,7 @@ class _FormDespesaState extends State<FormDespesa> {
             controller: _descricaoController,
             decoration: const InputDecoration(labelText: 'Descrição'),
             validator: (value) =>
-            value == null || value.isEmpty ? 'Informe uma descrição' : null,
+                value == null || value.isEmpty ? 'Informe uma descrição' : null,
           ),
 
           // Campo de valor
@@ -87,10 +109,29 @@ class _FormDespesaState extends State<FormDespesa> {
             decoration: const InputDecoration(labelText: 'Valor (R\$)'),
             keyboardType: TextInputType.number,
             validator: (value) {
-              final val = double.tryParse(value ?? '');
+              final val = double.tryParse(value?.replaceAll(',', '.') ?? '');
               if (val == null || val <= 0) return 'Informe um valor válido';
               return null;
             },
+          ),
+
+          const SizedBox(height: 10),
+
+          // NOVO CAMPO — Seletor de data
+          GestureDetector(
+            onTap: _selecionarData,
+            child: AbsorbPointer(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Data da despesa',
+                  prefixIcon: Icon(Icons.calendar_month),
+                ),
+                controller: TextEditingController(
+                  text:
+                      "${_dataSelecionada.day}/${_dataSelecionada.month}/${_dataSelecionada.year}",
+                ),
+              ),
+            ),
           ),
 
           const SizedBox(height: 10),
@@ -129,7 +170,7 @@ class _FormDespesaState extends State<FormDespesa> {
     );
   }
 
-  /// Define ícones para cada categoria (melhor UX visual)
+  /// Ícones pra cada categoria
   IconData _iconeCategoria(String categoria) {
     switch (categoria) {
       case 'Alimentação':

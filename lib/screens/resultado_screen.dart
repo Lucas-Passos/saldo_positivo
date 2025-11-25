@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../datasource/hive_datasource.dart';
 import '../models/receita.dart';
 import '../models/despesa.dart';
+import '../models/resultado.dart';
 import '../widgets/saldo_card.dart';
 import '../widgets/date_filter.dart';
 import '../widgets/clear_filter.dart';
-import '../models/resultado.dart';
+import '../widgets/pizza_grafico.dart';
+import '../utils/category_colors.dart';
 
 class ResultadoScreen extends StatefulWidget {
   const ResultadoScreen({super.key});
@@ -16,224 +17,246 @@ class ResultadoScreen extends StatefulWidget {
 }
 
 class _ResultadoScreenState extends State<ResultadoScreen> {
-  final HiveDataSource _data = HiveDataSource();
+  final PageController _pageController = PageController(viewportFraction: 0.92);
+  int _paginaAtual = 0;
 
   DateTime? dataInicial;
   DateTime? dataFinal;
 
-  // 1. LÓGICA DE AGRUPAMENTO (Mantida)
-  Map<String, double> agruparPorCategoria(List<dynamic> itens) {
+  // Agrupa por categoria
+  Map<String, double> _agruparPorCategoria(List<dynamic> itens) {
     final Map<String, double> mapa = {};
-
     for (var item in itens) {
-      final categoria = item.categoria;
-      final valor = item.valor;
-
-      mapa[categoria] = (mapa[categoria] ?? 0) + valor;
+      mapa[item.categoria] = (mapa[item.categoria] ?? 0) + item.valor;
     }
-
     return mapa;
   }
 
-  // 2. LÓGICA DE EXIBIÇÃO DE MODAL (Mantida)
-  void mostrarCategorias(String titulo, Map<String, double> categorias) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              // Usando um ListView.builder para melhor eficiência e scannability
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: categorias.length,
-                  itemBuilder: (context, index) {
-                    final entry = categorias.entries.elementAt(index);
-                    return ListTile(
-                      title: Text(entry.key),
-                      trailing: Text(
-                        "R\$ ${entry.value.toStringAsFixed(2)}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 3. NOVO: Lógica de filtragem de item por período (Reutilização de código)
-  bool _filtrarPorPeriodo(dynamic item) {
-    if (dataInicial != null && item.data.isBefore(dataInicial!)) {
-      return false;
-    }
-    // Note: Usamos `isAfter` do dataFinal para incluir o dia final.
-    // Se o DateTime do item tiver hora, pode ser que o último dia seja excluído.
-    // Para precisão total, precisaríamos zerar a hora. Por simplicidade, mantivemos a lógica original.
-    if (dataFinal != null && item.data.isAfter(dataFinal!)) {
-      return false;
-    }
+  // Filtro de período
+  bool _filtrarPeriodo(dynamic item) {
+    if (dataInicial != null && item.data.isBefore(dataInicial!)) return false;
+    if (dataFinal != null && item.data.isAfter(dataFinal!)) return false;
     return true;
   }
 
-  // 4. NOVO: Cálculo dos resultados filtrados (Separação de lógica)
-  ResultadosFinanceiros _calcularResultadosFiltrados(
-    List<Receita> receitas,
-    List<Despesa> despesas,
-  ) {
-    // 🔹 FILTRANDO PELO PERÍODO (Reutilizando _filtrarPorPeriodo)
-    final receitasFiltradas = receitas.where(_filtrarPorPeriodo).toList();
-    final despesasFiltradas = despesas.where(_filtrarPorPeriodo).toList();
+  // Calcula totais
+  ResultadosFinanceiros _calcularResultados(List<Receita> r, List<Despesa> d) {
+    final receitasFiltradas = r.where(_filtrarPeriodo).toList();
+    final despesasFiltradas = d.where(_filtrarPeriodo).toList();
 
-    // 🔹 SOMA DOS VALORES FILTRADOS
     final totalReceitas = receitasFiltradas.fold(
       0.0,
-      (sum, r) => sum + r.valor,
+      (sum, item) => sum + item.valor,
     );
-
     final totalDespesas = despesasFiltradas.fold(
       0.0,
-      (sum, d) => sum + d.valor,
+      (sum, item) => sum + item.valor,
     );
-
-    final saldo = totalReceitas - totalDespesas;
 
     return ResultadosFinanceiros(
       receitasFiltradas: receitasFiltradas,
       despesasFiltradas: despesasFiltradas,
       totalReceitas: totalReceitas,
       totalDespesas: totalDespesas,
-      saldo: saldo,
+      saldo: totalReceitas - totalDespesas,
     );
   }
 
-  // 5. NOVO: Construtor de Card reutilizável (Limpeza da UI)
-  Widget _buildResultadoCard({
-    required Color color,
+  // Porcentagens para gráficos
+  Map<String, double> _calcularPorcentagens(List<dynamic> itens) {
+    final total = itens.fold(0.0, (s, i) => s + i.valor);
+    if (total == 0) return {};
+    final Map<String, double> mapa = {};
+    for (var i in itens) {
+      mapa[i.categoria] = (mapa[i.categoria] ?? 0) + i.valor;
+    }
+    mapa.updateAll((key, value) => (value / total) * 100);
+    return mapa;
+  }
+
+  // Resumo Card usando cores neutras do tema
+  Widget _buildResumoCard({
     required IconData icon,
     required String title,
     required double total,
     required List<dynamic> itens,
-    required String modalTitle,
   }) {
-    return GestureDetector(
-      onTap: () {
-        final mapa = agruparPorCategoria(itens);
-        mostrarCategorias(modalTitle, mapa);
-      },
-      child: Card(
-        color: color,
-        child: ListTile(
-          leading: Icon(
-            icon,
-            color: color == Colors.green.shade50 ? Colors.green : Colors.red,
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          trailing: Text(
-            "R\$ ${total.toStringAsFixed(2)}",
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    final theme = Theme.of(context);
+    final surfaceColor = theme.colorScheme.surfaceContainerHighest;
+
+    final categoriasAgrupadas = _agruparPorCategoria(itens);
+
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ExpansionTile(
+        leading: Icon(
+          icon,
+          color: icon == Icons.arrow_upward ? Colors.green : Colors.red,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
           ),
         ),
+        trailing: Text(
+          "R\$ ${total.toStringAsFixed(2)}",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        children: categoriasAgrupadas.entries.map((e) {
+          final catColor = CategoryColors.getColor(e.key);
+          return ListTile(
+            contentPadding: const EdgeInsets.only(left: 30, right: 20),
+            leading: CircleAvatar(backgroundColor: catColor, radius: 8),
+            title: Text(e.key),
+            trailing: Text(
+              "R\$ ${e.value.toStringAsFixed(2)}",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
       ),
+    );
+  }
+
+  // Indicador de página
+  Widget _buildIndicadorPontos() {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(2, (index) {
+        final bool isActive = _paginaAtual == index;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          height: 8,
+          width: isActive ? 24 : 8,
+          decoration: BoxDecoration(
+            color: isActive
+                ? theme.colorScheme.primary
+                : theme.colorScheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final receitaBox = Hive.box<Receita>('receitas');
-    final despesaBox = Hive.box<Despesa>('despesas');
+    final receitasBox = Hive.box<Receita>('receitas');
+    final despesasBox = Hive.box<Despesa>('despesas');
 
     return Scaffold(
       body: ValueListenableBuilder(
-        valueListenable: receitaBox.listenable(),
+        valueListenable: receitasBox.listenable(),
         builder: (context, _, __) {
           return ValueListenableBuilder(
-            valueListenable: despesaBox.listenable(),
+            valueListenable: despesasBox.listenable(),
             builder: (context, _, __) {
-              final receitas = receitaBox.values.toList();
-              final despesas = despesaBox.values.toList();
+              final receitas = receitasBox.values.toList();
+              final despesas = despesasBox.values.toList();
 
-              // 🌟 Chamada da função de cálculo
-              final resultados = _calcularResultadosFiltrados(
-                receitas,
-                despesas,
+              final resultados = _calcularResultados(receitas, despesas);
+              final porcentagensDespesas = _calcularPorcentagens(
+                resultados.despesasFiltradas,
+              );
+              final porcentagensReceitas = _calcularPorcentagens(
+                resultados.receitasFiltradas,
               );
 
-              return Padding(
-                padding: const EdgeInsets.all(20),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 🔹 FILTRO DE DATA
-                    DateFilter(
-                      dataInicial: dataInicial,
-                      dataFinal: dataFinal,
-                      onSelectDataInicial: (d) {
-                        setState(() => dataInicial = d);
-                      },
-                      onSelectDataFinal: (d) {
-                        setState(() => dataFinal = d);
-                      },
+                    // Filtro de datas
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: DateFilter(
+                        dataInicial: dataInicial,
+                        dataFinal: dataFinal,
+                        onSelectDataInicial: (d) =>
+                            setState(() => dataInicial = d),
+                        onSelectDataFinal: (d) => setState(() => dataFinal = d),
+                      ),
                     ),
-                    const SizedBox(height: 25),
 
-                    // 🧹 BOTÃO LIMPAR FILTROS
                     if (dataInicial != null || dataFinal != null) ...[
-                      ClearFilterButton(
-                        onClear: () {
-                          setState(() {
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: ClearFilterButton(
+                          onClear: () => setState(() {
                             dataInicial = null;
                             dataFinal = null;
-                          });
-                        },
+                          }),
+                        ),
                       ),
-                      const SizedBox(height: 10),
                     ],
 
+                    const SizedBox(height: 20),
+
+                    // Saldo
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SaldoCard(saldo: resultados.saldo),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // GRÁFICOS
+                    SizedBox(
+                      height: 300,
+                      child: PageView(
+                        controller: _pageController,
+                        onPageChanged: (i) => setState(() => _paginaAtual = i),
+                        children: [
+                          PizzaGrafico(
+                            titulo: "Distribuição de Gastos",
+                            dados: porcentagensDespesas,
+                          ),
+                          PizzaGrafico(
+                            titulo: "Distribuição de Receitas",
+                            dados: porcentagensReceitas,
+                          ),
+                        ],
+                      ),
+                    ),
+
                     const SizedBox(height: 10),
+                    _buildIndicadorPontos(),
+                    const SizedBox(height: 20),
 
-                    // 🟩 CARD TOTAL RECEITAS FILTRADAS (UI Limpa)
-                    _buildResultadoCard(
-                      color: Colors.green.shade50,
-                      icon: Icons.arrow_upward,
-                      title: "Receitas no período",
-                      total: resultados.totalReceitas,
-                      itens: resultados.receitasFiltradas,
-                      modalTitle: "Receitas por categoria",
+                    // Resumos de Receitas e Despesas
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          _buildResumoCard(
+                            icon: Icons.arrow_upward,
+                            title: "Resumo de Receitas",
+                            total: resultados.totalReceitas,
+                            itens: resultados.receitasFiltradas,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildResumoCard(
+                            icon: Icons.arrow_downward,
+                            title: "Resumo de Despesas",
+                            total: resultados.totalDespesas,
+                            itens: resultados.despesasFiltradas,
+                          ),
+                        ],
+                      ),
                     ),
 
-                    // 🟥 CARD TOTAL DESPESAS FILTRADAS (UI Limpa)
-                    _buildResultadoCard(
-                      color: Colors.red.shade50,
-                      icon: Icons.arrow_downward,
-                      title: "Despesas no período",
-                      total: resultados.totalDespesas,
-                      itens: resultados.despesasFiltradas,
-                      modalTitle: "Despesas por categoria",
-                    ),
-
-                    // 🟦 SALDO NO PERÍODO
-                    SaldoCard(saldo: resultados.saldo),
+                    const SizedBox(height: 20),
                   ],
                 ),
               );
