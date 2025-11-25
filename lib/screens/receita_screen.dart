@@ -18,72 +18,80 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Ajusta automaticamente quando o teclado aparece
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título adaptado ao tema
-            Text(
-              "Cadastro de Receitas",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onBackground,
-              ),
-            ),
-            const SizedBox(height: 20),
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Título adaptado ao tema
+                Text(
+                  "Cadastro de Receitas",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onBackground,
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-            const FormReceita(),
-            const SizedBox(height: 20),
+                const FormReceita(),
+                const SizedBox(height: 20),
 
-            Expanded(
-              child: ValueListenableBuilder(
-                valueListenable: receitasBox.listenable(),
-                builder: (context, box, _) {
-                  final receitas = box.values.toList();
-                  final receitasOrdenadas = receitas.reversed.toList();
-                  final ultima = receitasOrdenadas.isNotEmpty
-                      ? receitasOrdenadas.first
-                      : null;
+                ValueListenableBuilder(
+                  valueListenable: receitasBox.listenable(),
+                  builder: (context, box, _) {
+                    final receitas = box.values.toList();
+                    final receitasOrdenadas = receitas.reversed.toList();
+                    final ultima = receitasOrdenadas.isNotEmpty
+                        ? receitasOrdenadas.first
+                        : null;
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Última receita — card adaptado ao tema
-                      if (ultima != null)
-                        Card(
-                          color: colorScheme.surfaceContainerHigh,
-                          child: ListTile(
-                            title: Text(
-                              "Última receita: ${ultima.descricao}",
-                              style: TextStyle(color: colorScheme.onSurface),
-                            ),
-                            subtitle: Text(
-                              "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}\n"
-                              "📅 ${ultima.data.day}/${ultima.data.month}/${ultima.data.year}",
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (ultima != null)
+                          Card(
+                            color: colorScheme.surfaceContainerHigh,
+                            child: ListTile(
+                              title: Text(
+                                "Última receita: ${ultima.descricao}",
+                                style: TextStyle(color: colorScheme.onSurface),
+                              ),
+                              subtitle: Text(
+                                "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}\n"
+                                "📅 ${ultima.data.day}/${ultima.data.month}/${ultima.data.year}",
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ),
+
+                        const SizedBox(height: 20),
+
+                        Text(
+                          "Lista de Receitas",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onBackground,
+                          ),
                         ),
+                        const SizedBox(height: 10),
 
-                      const SizedBox(height: 20),
-
-                      Text(
-                        "Lista de Receitas",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onBackground,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      Expanded(
-                        child: ListView.builder(
+                        // Lista interna não-rolável (o SingleChildScrollView faz a rolagem)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
                           itemCount: receitasOrdenadas.length,
                           itemBuilder: (context, i) {
                             final r = receitasOrdenadas[i];
@@ -143,13 +151,13 @@ class _ReceitaScreenState extends State<ReceitaScreen> {
                             );
                           },
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -18,65 +18,72 @@ class _DespesaScreenState extends State<DespesaScreen> {
     final colors = theme.colorScheme;
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Cadastro de Despesas",
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Cadastro de Despesas",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
+                const FormDespesa(),
+                const SizedBox(height: 20),
 
-            const FormDespesa(),
-            const SizedBox(height: 20),
+                ValueListenableBuilder(
+                  valueListenable: despesasBox.listenable(),
+                  builder: (context, box, _) {
+                    final despesas = box.values.toList();
+                    final despesasOrdenadas = despesas.reversed.toList();
+                    final ultima = despesasOrdenadas.isNotEmpty
+                        ? despesasOrdenadas.first
+                        : null;
 
-            Expanded(
-              child: ValueListenableBuilder(
-                valueListenable: despesasBox.listenable(),
-                builder: (context, box, _) {
-                  final despesas = box.values.toList();
-                  final despesasOrdenadas = despesas.reversed.toList();
-                  final ultima = despesasOrdenadas.isNotEmpty
-                      ? despesasOrdenadas.first
-                      : null;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (ultima != null)
-                        Card(
-                          elevation: 0,
-                          color: colors.surfaceContainerHigh,
-                          child: ListTile(
-                            title: Text(
-                              "Última despesa: ${ultima.descricao}",
-                              style: theme.textTheme.bodyLarge,
-                            ),
-                            subtitle: Text(
-                              "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}\n"
-                              "📅 ${ultima.data.day}/${ultima.data.month}/${ultima.data.year}",
-                              style: theme.textTheme.bodyMedium,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (ultima != null)
+                          Card(
+                            elevation: 0,
+                            color: colors.surfaceContainerHigh,
+                            child: ListTile(
+                              title: Text(
+                                "Última despesa: ${ultima.descricao}",
+                                style: theme.textTheme.bodyLarge,
+                              ),
+                              subtitle: Text(
+                                "${ultima.categoria} — R\$ ${ultima.valor.toStringAsFixed(2)}\n"
+                                "📅 ${ultima.data.day}/${ultima.data.month}/${ultima.data.year}",
+                                style: theme.textTheme.bodyMedium,
+                              ),
                             ),
                           ),
+
+                        const SizedBox(height: 20),
+
+                        Text(
+                          "Lista de Despesas",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                        const SizedBox(height: 10),
 
-                      const SizedBox(height: 20),
-
-                      Text(
-                        "Lista de Despesas",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      Expanded(
-                        child: ListView.builder(
+                        // Lista interna não-rolável
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
                           itemCount: despesasOrdenadas.length,
                           itemBuilder: (context, i) {
                             final d = despesasOrdenadas[i];
@@ -94,7 +101,6 @@ class _DespesaScreenState extends State<DespesaScreen> {
                                   '📅 ${d.data.day}/${d.data.month}/${d.data.year}',
                                   style: theme.textTheme.bodyMedium,
                                 ),
-
                                 trailing: IconButton(
                                   icon: const Icon(
                                     Icons.delete,
@@ -104,8 +110,6 @@ class _DespesaScreenState extends State<DespesaScreen> {
                                     showDialog(
                                       context: context,
                                       builder: (ctx) => AlertDialog(
-                                        backgroundColor:
-                                            colors.surfaceContainerLow,
                                         title: const Text("Excluir Despesa"),
                                         content: const Text(
                                           "Tem certeza que deseja remover este item permanentemente?",
@@ -137,13 +141,13 @@ class _DespesaScreenState extends State<DespesaScreen> {
                             );
                           },
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
